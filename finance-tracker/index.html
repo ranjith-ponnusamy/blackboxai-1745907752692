@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Finance Tracker</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+  <header class="bg-white shadow p-4">
+    <h1 class="text-2xl font-semibold text-gray-800">Finance Tracker</h1>
+  </header>
+  <main class="flex-grow container mx-auto p-4 max-w-4xl">
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="bg-white rounded-lg shadow p-4 text-center">
+        <h2 class="text-gray-500 uppercase text-sm font-semibold mb-2">Income</h2>
+        <p id="income" class="text-green-600 text-3xl font-bold">$0.00</p>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4 text-center">
+        <h2 class="text-gray-500 uppercase text-sm font-semibold mb-2">Expenses</h2>
+        <p id="expenses" class="text-red-600 text-3xl font-bold">$0.00</p>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4 text-center">
+        <h2 class="text-gray-500 uppercase text-sm font-semibold mb-2">Balance</h2>
+        <p id="balance" class="text-gray-800 text-3xl font-bold">$0.00</p>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-lg shadow p-4 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Add Transaction</h2>
+      <form id="transaction-form" class="space-y-4">
+        <div>
+          <label for="description" class="block text-gray-700 font-medium mb-1">Description</label>
+          <input type="text" id="description" name="description" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label for="amount" class="block text-gray-700 font-medium mb-1">Amount</label>
+          <input type="number" step="0.01" id="amount" name="amount" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <p class="text-sm text-gray-500 mt-1">Use positive for income, negative for expense</p>
+        </div>
+        <div>
+          <label for="category" class="block text-gray-700 font-medium mb-1">Category</label>
+          <select id="category" name="category" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="" disabled selected>Select category</option>
+            <option value="salary">Salary</option>
+            <option value="food">Food</option>
+            <option value="transport">Transport</option>
+            <option value="entertainment">Entertainment</option>
+            <option value="utilities">Utilities</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">Add Transaction</button>
+      </form>
+    </section>
+
+    <section class="bg-white rounded-lg shadow p-4">
+      <h2 class="text-xl font-semibold mb-4">Transactions</h2>
+      <ul id="transaction-list" class="divide-y divide-gray-200 max-h-96 overflow-y-auto"></ul>
+    </section>
+  </main>
+
+  <footer class="bg-white shadow p-4 text-center text-gray-500 text-sm">
+    &copy; 2024 Finance Tracker
+  </footer>
+
+  <script>
+    const form = document.getElementById('transaction-form');
+    const transactionList = document.getElementById('transaction-list');
+    const incomeEl = document.getElementById('income');
+    const expensesEl = document.getElementById('expenses');
+    const balanceEl = document.getElementById('balance');
+
+    let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+
+    function saveTransactions() {
+      localStorage.setItem('transactions', JSON.stringify(transactions));
+    }
+
+    function formatCurrency(amount) {
+      return amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    }
+
+    function updateSummary() {
+      const income = transactions
+        .filter(t => t.amount > 0)
+        .reduce((acc, t) => acc + t.amount, 0);
+      const expenses = transactions
+        .filter(t => t.amount < 0)
+        .reduce((acc, t) => acc + t.amount, 0);
+      const balance = income + expenses;
+
+      incomeEl.textContent = formatCurrency(income);
+      expensesEl.textContent = formatCurrency(Math.abs(expenses));
+      balanceEl.textContent = formatCurrency(balance);
+    }
+
+    function renderTransactions() {
+      transactionList.innerHTML = '';
+      transactions.forEach((t, index) => {
+        const li = document.createElement('li');
+        li.className = 'flex justify-between items-center py-2';
+
+        const desc = document.createElement('div');
+        desc.className = 'flex flex-col';
+        const descText = document.createElement('span');
+        descText.textContent = t.description;
+        descText.className = 'font-medium text-gray-800';
+        const categoryText = document.createElement('span');
+        categoryText.textContent = t.category;
+        categoryText.className = 'text-sm text-gray-500';
+        desc.appendChild(descText);
+        desc.appendChild(categoryText);
+
+        const amount = document.createElement('span');
+        amount.textContent = formatCurrency(t.amount);
+        amount.className = t.amount > 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        deleteBtn.className = 'text-red-500 hover:text-red-700 ml-4';
+        deleteBtn.setAttribute('aria-label', 'Delete transaction');
+        deleteBtn.addEventListener('click', () => {
+          transactions.splice(index, 1);
+          saveTransactions();
+          renderTransactions();
+          updateSummary();
+        });
+
+        li.appendChild(desc);
+        li.appendChild(amount);
+        li.appendChild(deleteBtn);
+
+        transactionList.appendChild(li);
+      });
+    }
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const description = form.description.value.trim();
+      const amount = parseFloat(form.amount.value);
+      const category = form.category.value;
+
+      if (!description || isNaN(amount) || !category) return;
+
+      transactions.push({ description, amount, category });
+      saveTransactions();
+      renderTransactions();
+      updateSummary();
+      form.reset();
+    });
+
+    // Initial render
+    renderTransactions();
+    updateSummary();
+  </script>
+</body>
+</html>
